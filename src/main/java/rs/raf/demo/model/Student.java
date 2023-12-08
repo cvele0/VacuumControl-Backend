@@ -17,9 +17,14 @@ public class Student {
 
     private String lastName;
 
-    @Column(name = "FIRST_NAME")
     private String firstName;
 
+    /**
+     * Kada zelimo u bazu da upisemo objekat a da
+     * ne pravimo relaciju sa nekom tabelom,
+     * koristimo @Embedded da definisemo taj objekat.
+     * @Embedded nema id i ne i zavisan je od tabele u kojoj je.
+     */
     @Embedded
     @AttributeOverrides({
             @AttributeOverride(name = "street", column = @Column(name = "ST_STREET")),
@@ -28,6 +33,11 @@ public class Student {
     })
     private Address address;
 
-    @ManyToMany(mappedBy = "students", fetch = FetchType.LAZY, cascade = {  CascadeType.ALL })
+    @ManyToMany
+    @JoinTable(
+            name = "STUDENTS_COURSES",
+            joinColumns = @JoinColumn(name = "STUDENT_ID", referencedColumnName = "ID"),
+            inverseJoinColumns = @JoinColumn(name = "COURSE_ID", referencedColumnName = "ID")
+    )
     private List<Course> courses = new ArrayList<>();
 }

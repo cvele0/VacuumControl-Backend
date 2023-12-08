@@ -78,24 +78,31 @@ public class BootstrapData implements CommandLineRunner {
 //            course.setTeacher(teacherRepository.findById((long) (random.nextInt(teachers.size()) + 1)).get());
             course.setTeacher(teachers.get(random.nextInt(teachers.size())));
             for (int j = 0; j < 5; j++) {
-                course.getStudents().add(studentRepository.findById((long) random.nextInt(students.size()) + 1).get());
+//                course.getStudents().add(studentRepository.findById((long) random.nextInt(students.size()) + 1).get());
+                course.getStudents().add(students.get(random.nextInt(students.size())));
             }
 
             CourseMaterial courseMaterial = new CourseMaterial();
-            courseMaterial.setUrl("localhost:8080/courses/" + COURSE_LIST[i].replaceAll(" ", "-"));
+            courseMaterial.setUrl("/courses/" + COURSE_LIST[i].replaceAll(" ", "-"));
             courseMaterial.setCourse(course);
 
             course.setMaterial(courseMaterial);
             courseRepository.save(course);
         }
 
+        //Admin user setup
         User user1 = new User();
-        user1.setUsername("user1");
-        user1.setPassword(this.passwordEncoder.encode("user1"));
+        user1.setName("Vladan");
+        user1.setSurname("Cvjetkovic");
+        user1.setEmail("vladancvjetkovic@gmail.com");
+        user1.setHashedPassword(this.passwordEncoder.encode("vladan"));
+        user1.setPermissions(
+            UserPermission.CAN_CREATE_USERS |
+            UserPermission.CAN_DELETE_USERS |
+            UserPermission.CAN_READ_USERS |
+            UserPermission.CAN_UPDATE_USERS
+        );
         this.userRepository.save(user1);
-
-
-
         System.out.println("Data loaded!");
     }
 }

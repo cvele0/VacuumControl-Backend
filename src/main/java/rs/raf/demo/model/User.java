@@ -14,8 +14,17 @@ public class User {
     private Long userId;
 
     @Column
-    private String username;
+    private String name;
 
     @Column
-    private String password;
+    private String surname;
+
+    @Column
+    private String email;
+
+    @Column
+    private String hashedPassword;
+
+    @Column
+    private int permissions;
 }
