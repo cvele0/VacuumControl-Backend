@@ -27,4 +27,14 @@ public class User {
 
     @Column
     private int permissions = 0;
+
+  public User() {}
+
+  public User(User user) {
+      this.name = user.name;
+      this.surname = user.surname;
+      this.email = user.email;
+      this.hashedPassword = user.hashedPassword;
+      this.permissions = user.permissions;
+  }
 }

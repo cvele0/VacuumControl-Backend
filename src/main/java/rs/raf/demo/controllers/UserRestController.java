@@ -2,9 +2,8 @@ package rs.raf.demo.controllers;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import rs.raf.demo.model.Student;
 import rs.raf.demo.model.User;
 import rs.raf.demo.services.UserService;
 
@@ -16,9 +15,11 @@ import java.util.Optional;
 @RequestMapping("/api/users")
 public class UserRestController {
   private final UserService userService;
+  private final PasswordEncoder passwordEncoder;
 
-  public UserRestController(UserService userService) {
+  public UserRestController(UserService userService, PasswordEncoder passwordEncoder) {
     this.userService = userService;
+    this.passwordEncoder = passwordEncoder;
   }
 
   @GetMapping(value = "/all",
@@ -40,7 +41,10 @@ public class UserRestController {
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
           produces = MediaType.APPLICATION_JSON_VALUE)
   public User createUser(@RequestBody User user) {
-    return userService.save(user);
+    User newUser = new User(user);
+    String hashedPassword = this.passwordEncoder.encode(user.getHashedPassword());
+    newUser.setHashedPassword(hashedPassword);
+    return userService.save(newUser);
   }
 
   @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
