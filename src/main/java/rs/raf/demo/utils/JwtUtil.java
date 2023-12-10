@@ -22,12 +22,18 @@ public class JwtUtil {
         return extractAllClaims(token).getSubject();
     }
 
+    public int extractPermissions(String token) {
+        return extractAllClaims(token).get("permissions", Integer.class);
+    }
+
+
     public boolean isTokenExpired(String token){
         return extractAllClaims(token).getExpiration().before(new Date());
     }
 
-    public String generateToken(String username){
+    public String generateToken(String username, int permissions){
         Map<String, Object> claims = new HashMap<>();
+        claims.put("permissions", permissions);
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)

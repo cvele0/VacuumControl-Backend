@@ -50,4 +50,14 @@ public class UserService implements UserDetailsService, IService<User, Long> {
         }
         return new org.springframework.security.core.userdetails.User(myUser.getEmail(), myUser.getHashedPassword(), new ArrayList<>());
     }
+
+    public int getPermissionsByEmail(String email) {
+        User user = this.userRepository.findByEmail(email);
+        if (user != null) {
+            return user.getPermissions();
+        } else {
+            // Handle scenario where user with given email doesn't exist
+            return 0; // Or any default value for permissions
+        }
+    }
 }

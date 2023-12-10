@@ -25,7 +25,7 @@ public class UserRestController {
           produces = MediaType.APPLICATION_JSON_VALUE)
   public List<User> getAllUsers() {
     return userService.findAll();
-  };
+  }
 
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<?> getUserById(@RequestParam("userId") Long id) {
