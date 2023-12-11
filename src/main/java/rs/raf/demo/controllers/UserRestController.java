@@ -50,6 +50,8 @@ public class UserRestController {
   @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
           produces = MediaType.APPLICATION_JSON_VALUE)
   public User updateUser(@RequestBody User user) {
+    String hashedPassword = this.passwordEncoder.encode(user.getHashedPassword());
+    user.setHashedPassword(hashedPassword);
     return userService.save(user);
   }
 
