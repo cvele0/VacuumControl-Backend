@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import rs.raf.demo.model.UserPermission;
 import rs.raf.demo.services.UserService;
 import rs.raf.demo.utils.JwtUtil;
 
@@ -51,6 +52,34 @@ public class JwtFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
             }
         }
+
+        String requestURI = httpServletRequest.getRequestURI();
+        String requestMethod = httpServletRequest.getMethod();
+
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            UserDetails userDetails = this.userService.loadUserByUsername(username);
+            String username2 = userDetails.getUsername();
+
+            int permissions = this.userService.getPermissionsByEmail(username2);
+
+            if (requestMethod.equalsIgnoreCase("get") &&
+                    requestURI.endsWith("api/users/all") && ((permissions & UserPermission.CAN_READ_USERS) == 0)) {
+                httpServletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            }
+            if (requestMethod.equalsIgnoreCase("post") &&
+                    requestURI.endsWith("api/users") && ((permissions & UserPermission.CAN_CREATE_USERS) == 0)) {
+                httpServletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            }
+            if (requestMethod.equalsIgnoreCase("put") &&
+                    requestURI.endsWith("api/users") && ((permissions & UserPermission.CAN_UPDATE_USERS) == 0)) {
+                httpServletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            }
+            if (requestMethod.equalsIgnoreCase("delete") &&
+                    requestURI.contains("api/users") && ((permissions & UserPermission.CAN_DELETE_USERS) == 0)) {
+                httpServletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            }
+        }
+
         filterChain.doFilter(httpServletRequest, httpServletResponse);
     }
 }
