@@ -1,9 +1,12 @@
 package rs.raf.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import javax.persistence.*;
+import java.util.List;
 
 @Entity
 @Getter
@@ -27,6 +30,11 @@ public class User {
 
     @Column
     private int permissions = 0;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
+    @ToString.Exclude
+    private List<Cleaner> cleaners;
 
   public User() {}
 
