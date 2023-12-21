@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import javax.persistence.*;
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -22,11 +23,14 @@ public class Cleaner {
   @Enumerated(EnumType.ORDINAL)
   private CleanerStatus status;
 
+  @Column(nullable = false)
+  private Date dateCreated;
+
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", referencedColumnName = "user_id")
+  @JoinColumn(name = "user_id", referencedColumnName = "userId")
   @JsonIgnore
   @ToString.Exclude
-  private User user;
+  private User user = null;
 
   @Column(nullable = false)
   private Boolean active = true;
