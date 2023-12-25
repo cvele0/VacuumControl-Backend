@@ -16,7 +16,7 @@ import rs.raf.demo.filters.JwtFilter;
 import rs.raf.demo.services.UserService;
 
 @EnableWebSecurity
-@EnableAsync
+@EnableAsync(proxyTargetClass = true)
 public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final UserService userService;

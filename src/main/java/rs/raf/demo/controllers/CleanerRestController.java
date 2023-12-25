@@ -1,5 +1,6 @@
 package rs.raf.demo.controllers;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,11 +23,9 @@ import java.util.concurrent.ExecutionException;
 @RequestMapping("api/cleaner")
 public class CleanerRestController {
   private final CleanerService cleanerService;
-  private final UserService userService;
 
-  public CleanerRestController(CleanerService cleanerService, UserService userService) {
+  public CleanerRestController(CleanerService cleanerService) {
     this.cleanerService = cleanerService;
-    this.userService = userService;
   }
 
   @GetMapping(value = "/all")

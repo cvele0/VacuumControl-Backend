@@ -5,7 +5,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import rs.raf.demo.model.Student;
 import rs.raf.demo.model.User;
 import rs.raf.demo.repositories.UserRepository;
 
