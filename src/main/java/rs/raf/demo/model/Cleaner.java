@@ -21,7 +21,10 @@ public class Cleaner {
   private String name;
 
   @Enumerated(EnumType.ORDINAL)
-  private CleanerStatus status;
+  private CleanerStatus status = CleanerStatus.OFF;
+
+  @Version
+  private Long version;
 
   @Column(nullable = false)
   private Date dateCreated;
