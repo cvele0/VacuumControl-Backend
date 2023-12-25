@@ -1,20 +1,16 @@
 package rs.raf.demo.controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import rs.raf.demo.model.Cleaner;
-import rs.raf.demo.model.User;
+import rs.raf.demo.model.CleanerStatus;
 import rs.raf.demo.services.CleanerService;
-import rs.raf.demo.services.UserService;
 
 import javax.persistence.EntityNotFoundException;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -62,6 +58,9 @@ public class CleanerRestController {
   @PostMapping()
   public ResponseEntity<?> createCleaner(@RequestBody Cleaner cleaner) {
     try {
+      cleaner.setActive(true);
+      cleaner.setDateCreated(LocalDate.now());
+      cleaner.setStatus(CleanerStatus.OFF);
       Cleaner createdCleaner = cleanerService.save(cleaner);
       return ResponseEntity.status(HttpStatus.CREATED).body(createdCleaner);
     } catch (SecurityException e) {

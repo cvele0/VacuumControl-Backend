@@ -51,4 +51,8 @@ public class User {
       this.hashedPassword = user.hashedPassword;
       this.permissions = user.permissions;
   }
+    public void addCleaner(Cleaner cleaner) {
+        cleaners.add(cleaner);
+        cleaner.setUser(this); // Bidirectional relationship setup
+    }
 }

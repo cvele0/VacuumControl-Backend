@@ -2,7 +2,6 @@ package rs.raf.demo.bootstrap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import rs.raf.demo.model.*;
@@ -100,7 +99,13 @@ public class BootstrapData implements CommandLineRunner {
             UserPermission.CAN_CREATE_USERS |
             UserPermission.CAN_DELETE_USERS |
             UserPermission.CAN_READ_USERS |
-            UserPermission.CAN_UPDATE_USERS
+            UserPermission.CAN_UPDATE_USERS |
+            UserPermission.CAN_SEARCH_VACUUM |
+            UserPermission.CAN_START_VACUUM |
+            UserPermission.CAN_STOP_VACUUM |
+            UserPermission.CAN_DISCHARGE_VACUUM |
+            UserPermission.CAN_ADD_VACUUM |
+            UserPermission.CAN_REMOVE_VACUUMS
         );
         this.userRepository.save(user1);
         System.out.println("Data loaded!");

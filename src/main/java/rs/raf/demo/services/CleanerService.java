@@ -12,6 +12,7 @@ import rs.raf.demo.repositories.CleanerRepository;
 import rs.raf.demo.repositories.UserRepository;
 
 import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
@@ -29,10 +30,12 @@ public class CleanerService implements IService<Cleaner, Long> {
     this.userRepository = userRepository;
   }
   @Override
+  @Transactional
   public <S extends Cleaner> S save(S cleaner) {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
     User user = this.userRepository.findByEmail(userEmail);
     if (user != null && (user.getPermissions() & UserPermission.CAN_ADD_VACUUM) != 0) {
+      user.addCleaner(cleaner);
       return this.cleanerRepository.save(cleaner);
     } else {
       throw new SecurityException("User does not have CREATE permission");

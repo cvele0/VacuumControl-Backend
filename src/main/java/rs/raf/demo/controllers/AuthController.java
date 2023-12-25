@@ -3,15 +3,11 @@ package rs.raf.demo.controllers;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import rs.raf.demo.requests.LoginRequest;
 import rs.raf.demo.responses.LoginResponse;
 import rs.raf.demo.services.UserService;
 import rs.raf.demo.utils.JwtUtil;
-//import rs.edu.raf.spring_project.model.AuthReq;
-//import rs.edu.raf.spring_project.model.AuthRes;
 
 @RestController
 @CrossOrigin

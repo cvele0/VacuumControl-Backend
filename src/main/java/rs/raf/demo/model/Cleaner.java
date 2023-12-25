@@ -6,8 +6,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import javax.persistence.*;
-import java.util.Date;
-import java.util.List;
+import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -27,7 +26,7 @@ public class Cleaner {
   private Long version;
 
   @Column(nullable = false)
-  private Date dateCreated;
+  private LocalDate dateCreated;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id", referencedColumnName = "userId")
