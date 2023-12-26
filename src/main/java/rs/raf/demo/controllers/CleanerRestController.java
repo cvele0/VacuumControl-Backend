@@ -1,5 +1,6 @@
 package rs.raf.demo.controllers;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,10 +10,16 @@ import rs.raf.demo.services.CleanerService;
 
 import javax.persistence.EntityNotFoundException;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @CrossOrigin
 @RestController
@@ -87,6 +94,51 @@ public class CleanerRestController {
   public ResponseEntity<?> getCleanersByStatusIn(@RequestParam List<String> statuses) {
     try {
       List<Cleaner> cleaners = cleanerService.findByStatusIn(statuses);
+      return ResponseEntity.ok(cleaners);
+    } catch (SecurityException e) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Permission denied: " + e.getMessage());
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " + e.getMessage());
+    }
+  }
+
+  private Date convertToDate(String dateString) {
+    if (!dateString.isEmpty()) {
+      if (dateString.contains("T")) {
+        ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString);
+        return Date.from(zonedDateTime.toInstant());
+      } else {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate parsedDate = LocalDate.parse(dateString, formatter);
+        ZonedDateTime startOfDay = parsedDate.atStartOfDay(ZoneId.systemDefault());
+        return Date.from(startOfDay.toInstant());
+      }
+    }
+    return null;
+  }
+
+  @GetMapping("/applyAllFilters")
+  public ResponseEntity<?> applyAllFilters(
+          @RequestParam(value = "name", required = false, defaultValue = "") String name,
+          @RequestParam(value = "statuses", required = false, defaultValue = "") String statuses,
+          @RequestParam(value = "dateFrom", required = false, defaultValue = "")
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+          @RequestParam(value = "dateTo", required = false, defaultValue = "")
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+
+    List<CleanerStatus> passList = new ArrayList<>();
+    if (statuses != null && !statuses.isEmpty()) {
+      passList = Arrays.stream(statuses.split(","))
+              .map(String::toUpperCase) // Ensure case insensitivity
+              .map(CleanerStatus::valueOf)
+              .collect(Collectors.toList());
+    }
+    if (name.equalsIgnoreCase("")) name = null;
+//    Date dateFrom = convertToDate(dateFromString);
+//    Date dateTo = convertToDate(dateToString);
+
+    try {
+      List<Cleaner> cleaners = cleanerService.applyAllFilters(name, passList, dateFrom, dateTo);
       return ResponseEntity.ok(cleaners);
     } catch (SecurityException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Permission denied: " + e.getMessage());

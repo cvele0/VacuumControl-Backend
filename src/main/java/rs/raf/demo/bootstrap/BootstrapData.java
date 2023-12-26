@@ -107,6 +107,12 @@ public class BootstrapData implements CommandLineRunner {
             UserPermission.CAN_ADD_VACUUM |
             UserPermission.CAN_REMOVE_VACUUMS
         );
+        // Adding cleaners
+        for (int i = 0; i < 5; i++) {
+            String name = "Cleaner " + i;
+            Cleaner cleaner = new Cleaner(name, user1);
+            user1.addCleaner(cleaner);
+        }
         this.userRepository.save(user1);
         System.out.println("Data loaded!");
     }

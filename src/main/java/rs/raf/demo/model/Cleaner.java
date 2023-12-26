@@ -19,7 +19,7 @@ public class Cleaner {
   @Column(nullable = false)
   private String name;
 
-  @Enumerated(EnumType.ORDINAL)
+  @Enumerated(EnumType.STRING)
   private CleanerStatus status = CleanerStatus.OFF;
 
   @Version
@@ -38,4 +38,10 @@ public class Cleaner {
   private Boolean active = true;
 
   public Cleaner() {}
+
+  public Cleaner(String name, User user) {
+    this.name = name;
+    this.user = user;
+    this.dateCreated = LocalDate.now();
+  }
 }

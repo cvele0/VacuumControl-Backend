@@ -11,8 +11,16 @@ import rs.raf.demo.model.UserPermission;
 import rs.raf.demo.repositories.CleanerRepository;
 import rs.raf.demo.repositories.UserRepository;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
+import javax.persistence.PersistenceContext;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 import javax.transaction.Transactional;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
@@ -23,6 +31,9 @@ public class CleanerService implements IService<Cleaner, Long> {
   private CleanerRepository cleanerRepository;
   private UserRepository userRepository;
   private final Map<Long, Lock> cleanerLocks = new HashMap<>();
+
+  @PersistenceContext
+  private EntityManager entityManager;
 
   @Autowired
   public CleanerService(CleanerRepository cleanerRepository, UserRepository userRepository) {
@@ -55,7 +66,9 @@ public class CleanerService implements IService<Cleaner, Long> {
 
   @Override
   public List<Cleaner> findAll() {
-    return this.cleanerRepository.findAll();
+    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+    User user = this.userRepository.findByEmail(userEmail);
+    return this.cleanerRepository.findAllByUserId(user.getUserId());
   }
 
   @Override
@@ -75,11 +88,25 @@ public class CleanerService implements IService<Cleaner, Long> {
     }
   }
 
+  public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, LocalDate dateFrom, LocalDate dateTo) {
+    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+    User user = this.userRepository.findByEmail(userEmail);
+    if (user != null && (user.getPermissions() & UserPermission.CAN_SEARCH_VACUUM) != 0) {
+//      System.out.println("RADIM " + name + " " + statuses + " " + dateFrom.toString() + " " + dateTo.toString());
+//      statuses.clear();
+//      statuses.add(CleanerStatus.ON);
+//      statuses.add(CleanerStatus.OFF);
+      return this.cleanerRepository.applyAllFilters(user.getUserId(), name, statuses, dateFrom, dateTo);
+    } else {
+      throw new SecurityException("User does not have SEARCH permission");
+    }
+  }
+
   public List<Cleaner> findByNameContainingIgnoreCase(String name) {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
     User user = this.userRepository.findByEmail(userEmail);
     if (user != null && (user.getPermissions() & UserPermission.CAN_SEARCH_VACUUM) != 0) {
-      return this.cleanerRepository.findByNameContainingIgnoreCase(name);
+      return this.cleanerRepository.findByNameContainingIgnoreCaseAndUser_UserId(name, user.getUserId());
     } else {
       throw new SecurityException("User does not have SEARCH permission");
     }
@@ -89,7 +116,7 @@ public class CleanerService implements IService<Cleaner, Long> {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
     User user = this.userRepository.findByEmail(userEmail);
     if (user != null && (user.getPermissions() & UserPermission.CAN_SEARCH_VACUUM) != 0) {
-      return this.cleanerRepository.findByStatusIn(statuses);
+      return this.cleanerRepository.findByStatusInAndUser_UserId(statuses, user.getUserId());
     } else {
       throw new SecurityException("User does not have SEARCH permission");
     }
@@ -99,7 +126,7 @@ public class CleanerService implements IService<Cleaner, Long> {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
     User user = this.userRepository.findByEmail(userEmail);
     if (user != null && (user.getPermissions() & UserPermission.CAN_SEARCH_VACUUM) != 0) {
-      return this.cleanerRepository.findByDateRange(dateFrom, dateTo);
+      return this.cleanerRepository.findByDateRangeAndUserId(dateFrom, dateTo, user.getUserId());
     } else {
       throw new SecurityException("User does not have SEARCH permission");
     }
