@@ -54,16 +54,16 @@ public interface CleanerRepository extends JpaRepository<Cleaner, Long> {
 //                                @Param("statuses") String statuses,
 //                                @Param("dateFrom") LocalDate dateFrom,
 //                                @Param("dateTo") LocalDate dateTo);
-@Query("SELECT c FROM Cleaner c WHERE " +
-        "c.user.userId = :userId " +
-        "AND (:name IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
-        "AND (:statuses IS NULL OR c.status IN :statuses) " +
-        "AND (:dateFrom IS NULL OR c.dateCreated >= :dateFrom) " +
-        "AND (:dateTo IS NULL OR c.dateCreated <= :dateTo)")
-List<Cleaner> applyAllFilters(@Param("userId") Long userId,
-                              @Param("name") String name,
-                              @Param("statuses") List<CleanerStatus> statuses,
-                              @Param("dateFrom") LocalDate dateFrom,
-                              @Param("dateTo") LocalDate dateTo);
+//@Query("SELECT c FROM Cleaner c WHERE " +
+//        "c.user.userId = :userId " +
+//        "AND (:name IS NULL OR :name = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
+//        "AND (:statuses IS NULL OR :statuses IS EMPTY OR c.status IN :statuses) " +
+//        "AND (:dateFrom IS NULL OR c.dateCreated >= :dateFrom) " +
+//        "AND (:dateTo IS NULL OR c.dateCreated <= :dateTo)")
+//List<Cleaner> applyAllFilters(@Param("userId") Long userId,
+//                              @Param("name") String name,
+//                              @Param("statuses") List<CleanerStatus> statuses,
+//                              @Param("dateFrom") LocalDate dateFrom,
+//                              @Param("dateTo") LocalDate dateTo);
 
 }

@@ -28,8 +28,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class CleanerService implements IService<Cleaner, Long> {
-  private CleanerRepository cleanerRepository;
-  private UserRepository userRepository;
+  private final CleanerRepository cleanerRepository;
+  private final UserRepository userRepository;
   private final Map<Long, Lock> cleanerLocks = new HashMap<>();
 
   @PersistenceContext
@@ -68,7 +68,11 @@ public class CleanerService implements IService<Cleaner, Long> {
   public List<Cleaner> findAll() {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
     User user = this.userRepository.findByEmail(userEmail);
-    return this.cleanerRepository.findAllByUserId(user.getUserId());
+    if (user != null) {
+      return this.cleanerRepository.findAllByUserId(user.getUserId());
+    } else {
+      throw new SecurityException("User does not have SEARCH permission");
+    }
   }
 
   @Override
@@ -88,19 +92,50 @@ public class CleanerService implements IService<Cleaner, Long> {
     }
   }
 
-  public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, LocalDate dateFrom, LocalDate dateTo) {
-    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-    User user = this.userRepository.findByEmail(userEmail);
-    if (user != null && (user.getPermissions() & UserPermission.CAN_SEARCH_VACUUM) != 0) {
-//      System.out.println("RADIM " + name + " " + statuses + " " + dateFrom.toString() + " " + dateTo.toString());
-//      statuses.clear();
-//      statuses.add(CleanerStatus.ON);
-//      statuses.add(CleanerStatus.OFF);
-      return this.cleanerRepository.applyAllFilters(user.getUserId(), name, statuses, dateFrom, dateTo);
-    } else {
-      throw new SecurityException("User does not have SEARCH permission");
+//  public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, LocalDate dateFrom, LocalDate dateTo) {
+//    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+//    User user = this.userRepository.findByEmail(userEmail);
+//    if (user != null && (user.getPermissions() & UserPermission.CAN_SEARCH_VACUUM) != 0) {
+////      System.out.println("RADIM " + name + " " + statuses + " " + dateFrom.toString() + " " + dateTo.toString());
+////      statuses.clear();
+////      statuses.add(CleanerStatus.ON);
+////      statuses.add(CleanerStatus.OFF);
+//      return this.cleanerRepository.applyAllFilters(user.getUserId(), name, statuses, dateFrom, dateTo);
+//    } else {
+//      throw new SecurityException("User does not have SEARCH permission");
+//    }
+//  }
+public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, LocalDate dateFrom, LocalDate dateTo) {
+  String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+  User user = this.userRepository.findByEmail(userEmail);
+  if (user != null && (user.getPermissions() & UserPermission.CAN_SEARCH_VACUUM) != 0) {
+    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+    CriteriaQuery<Cleaner> query = cb.createQuery(Cleaner.class);
+    Root<Cleaner> root = query.from(Cleaner.class);
+    Predicate predicate = cb.equal(root.get("user").get("userId"), user.getUserId());
+
+    // Add conditions dynamically based on input parameters
+    if (name != null && !name.isEmpty()) {
+      predicate = cb.and(predicate, cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
     }
+    if (statuses != null && !statuses.isEmpty()) {
+      predicate = cb.and(predicate, root.get("status").in(statuses));
+    }
+    if (dateFrom != null) {
+      predicate = cb.and(predicate, cb.greaterThanOrEqualTo(root.get("dateCreated"), dateFrom));
+    }
+    if (dateTo != null) {
+      predicate = cb.and(predicate, cb.lessThanOrEqualTo(root.get("dateCreated"), dateTo));
+    }
+
+    query.select(root).where(predicate);
+    TypedQuery<Cleaner> typedQuery = entityManager.createQuery(query);
+    return typedQuery.getResultList();
+  } else {
+    throw new SecurityException("User does not have SEARCH permission");
   }
+}
+
 
   public List<Cleaner> findByNameContainingIgnoreCase(String name) {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();

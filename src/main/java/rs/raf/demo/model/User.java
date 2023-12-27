@@ -55,4 +55,9 @@ public class User {
         cleaners.add(cleaner);
         cleaner.setUser(this); // Bidirectional relationship setup
     }
+
+    public void addErrorMessage(ErrorMessage errorMessage) {
+      errorMessages.add(errorMessage);
+      errorMessage.setUser(this);
+    }
 }

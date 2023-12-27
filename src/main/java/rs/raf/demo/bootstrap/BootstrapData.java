@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import rs.raf.demo.model.*;
 import rs.raf.demo.repositories.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -113,6 +114,10 @@ public class BootstrapData implements CommandLineRunner {
             Cleaner cleaner = new Cleaner(name, user1);
             user1.addCleaner(cleaner);
         }
+        ErrorMessage errorMessage = new ErrorMessage("Entering a system",
+                "Testing error messages.");
+        errorMessage.setDate(LocalDate.of(2000, 10, 23));
+        user1.addErrorMessage(errorMessage);
         this.userRepository.save(user1);
         System.out.println("Data loaded!");
     }
