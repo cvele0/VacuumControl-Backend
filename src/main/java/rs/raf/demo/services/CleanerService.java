@@ -1,6 +1,8 @@
 package rs.raf.demo.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -83,7 +85,7 @@ public class CleanerService implements IService<Cleaner, Long> {
       Cleaner cleaner = this.cleanerRepository.findById(cleanerId)
               .orElseThrow(() -> new EntityNotFoundException("Cleaner not found"));
       if (cleaner.getStatus() == CleanerStatus.OFF) {
-        this.cleanerRepository.deleteById(cleanerId);
+        this.cleanerRepository.deactivateCleanerById(cleanerId);
       } else {
         throw new IllegalStateException("Cleaner must be in OFF state to be deleted");
       }
@@ -168,7 +170,7 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
   }
 
   @Async
-  public CompletableFuture<String> startCleanerAsync(Long cleanerId, String userEmail) {
+  public CompletableFuture<ResponseEntity<String>> startCleanerAsync(Long cleanerId, String userEmail) {
     Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
     boolean lockAcquired = cleanerLock.tryLock();
     try {
@@ -177,7 +179,8 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
         if (cleaner != null) {
           CleanerStatus status = cleaner.getStatus();
           if (status != CleanerStatus.OFF) {
-            return CompletableFuture.completedFuture("The cleaner cannot be started");
+            String errorMessage = "The cleaner cannot be started";
+            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
           } else {
             User user = userRepository.findByEmail(userEmail);
             if (user != null && (user.getPermissions() & UserPermission.CAN_START_VACUUM) != 0) {
@@ -191,17 +194,21 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
                 }
                 // Perform actions after cleaner stops (if needed)
               });
-              return CompletableFuture.completedFuture("Cleaner START initiated.");
+              String successMessage = "Cleaner START initiated successfully.";
+              return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
             } else {
-              return CompletableFuture.completedFuture("User does not have START permission.");
+              String errorMessage = "User does not have START permission.";
+              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
             }
           }
         } else {
-          return CompletableFuture.completedFuture("Cleaner not found.");
+          String errorMessage = "Cleaner not found.";
+          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
         }
       } else {
         // Lock couldn't be acquired, return an appropriate message
-        return CompletableFuture.completedFuture("The cleaner is already in use.");
+        String errorMessage = "The cleaner is already in use.";
+        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
       }
     } finally {
       // Ensure the lock is released in case of exceptions
@@ -212,7 +219,7 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
   }
 
   @Async
-  public CompletableFuture<String> stopCleanerAsync(Long cleanerId, String userEmail) {
+  public CompletableFuture<ResponseEntity<String>> stopCleanerAsync(Long cleanerId, String userEmail) {
     Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
     boolean lockAcquired = cleanerLock.tryLock();
     try {
@@ -221,7 +228,8 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
         if (cleaner != null) {
           CleanerStatus status = cleaner.getStatus();
           if (status != CleanerStatus.ON) {
-            return CompletableFuture.completedFuture("The cleaner cannot be stopped");
+              String errorMessage = "The cleaner cannot be stopped";
+              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
           } else {
             User user = userRepository.findByEmail(userEmail);
             if (user != null && (user.getPermissions() & UserPermission.CAN_STOP_VACUUM) != 0) {
@@ -235,17 +243,21 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
                 }
                 // Perform actions after cleaner stops (if needed)
               });
-              return CompletableFuture.completedFuture("Cleaner STOP initiated.");
+              String successMessage = "Cleaner STOP initiated successfully.";
+              return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
             } else {
-              return CompletableFuture.completedFuture("User does not have STOP permission.");
+              String errorMessage = "User does not have STOP permission.";
+              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
             }
           }
         } else {
-          return CompletableFuture.completedFuture("Cleaner not found.");
+          String errorMessage = "Cleaner not found.";
+          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
         }
       } else {
         // Lock couldn't be acquired, return an appropriate message
-        return CompletableFuture.completedFuture("The cleaner is already in use.");
+        String errorMessage = "The cleaner is already in use.";
+        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
       }
     } finally {
       // Ensure the lock is released in case of exceptions
@@ -256,7 +268,7 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
   }
 
   @Async
-  public CompletableFuture<String> dischargeCleanerAsync(Long cleanerId, String userEmail) {
+  public CompletableFuture<ResponseEntity<String>> dischargeCleanerAsync(Long cleanerId, String userEmail) {
     Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
     boolean lockAcquired = cleanerLock.tryLock();
     try {
@@ -265,7 +277,8 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
         if (cleaner != null) {
           CleanerStatus status = cleaner.getStatus();
           if (status != CleanerStatus.OFF) {
-            return CompletableFuture.completedFuture("The cleaner cannot be stopped");
+            String errorMessage = "The cleaner cannot be discharged";
+            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
           } else {
             User user = userRepository.findByEmail(userEmail);
             if (user != null && (user.getPermissions() & UserPermission.CAN_DISCHARGE_VACUUM) != 0) {
@@ -273,27 +286,47 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
                 try {
                   Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
                   cleaner.setStatus(CleanerStatus.DISCHARGING);
-                  cleanerRepository.save(cleaner);
-
-                  Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
+                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.DISCHARGING);
+                  System.out.println("DISCHARGING SET DONE");
+                  Thread.sleep(15000);
                   cleaner.setStatus(CleanerStatus.OFF);
-                  cleanerRepository.save(cleaner);
+                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
+                  System.out.println("TURNING OFF SET DONE");
+
+//                  try {
+//                    cleanerRepository.save(cleaner);
+//                  } catch (Exception e) {
+//                    System.out.println(e.getMessage());
+//                  }
+//                  System.out.println("DISCHARGING DONE");
+//                  Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
+//                  cleaner.setStatus(CleanerStatus.OFF);
+//                  try {
+//                    cleanerRepository.save(cleaner);
+//                  } catch (Exception e) {
+//                    System.out.println(e.getMessage());
+//                  }
+//                  System.out.println("TURNING OFF DONE");
                 } catch (InterruptedException e) {
                   Thread.currentThread().interrupt();
+                  throw new RuntimeException("THREAD EXC");
                 }
-                // Perform actions after cleaner stops (if needed)
               });
-              return CompletableFuture.completedFuture("Cleaner DISCHARGE initiated.");
+              String successMessage = "Cleaner DISCHARGE initiated successfully.";
+              return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
             } else {
-              return CompletableFuture.completedFuture("User does not have DISCHARGE permission.");
+              String errorMessage = "User does not have DISCHARGE permission.";
+              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
             }
           }
         } else {
-          return CompletableFuture.completedFuture("Cleaner not found.");
+          String errorMessage = "Cleaner not found.";
+          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
         }
       } else {
         // Lock couldn't be acquired, return an appropriate message
-        return CompletableFuture.completedFuture("The cleaner is already in use.");
+        String errorMessage = "The cleaner is already in use.";
+        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
       }
     } finally {
       // Ensure the lock is released in case of exceptions

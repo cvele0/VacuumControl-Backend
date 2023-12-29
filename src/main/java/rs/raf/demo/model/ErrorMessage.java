@@ -18,7 +18,6 @@ public class ErrorMessage {
   @JoinColumn(name = "user_id", referencedColumnName = "userId")
   private User user;
 
-  @Column(nullable = false)
   private LocalDate date;
 
   @Column(nullable = false)

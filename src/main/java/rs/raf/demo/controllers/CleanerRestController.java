@@ -163,10 +163,9 @@ public class CleanerRestController {
 
   @GetMapping("/start")
   public ResponseEntity<String> startCleaner(@RequestParam("cleanerId") Long cleanerId, @RequestParam("userEmail") String userEmail) {
-    CompletableFuture<String> startResult = cleanerService.startCleanerAsync(cleanerId, userEmail);
+    CompletableFuture<ResponseEntity<String>> startResult = cleanerService.startCleanerAsync(cleanerId, userEmail);
     try {
-      String result = startResult.get(); // Get the result of the asynchronous operation
-      return ResponseEntity.ok(result);
+      return startResult.get();
     } catch (InterruptedException | ExecutionException e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " + e.getMessage());
     }
@@ -174,10 +173,9 @@ public class CleanerRestController {
 
   @GetMapping("/stop")
   public ResponseEntity<String> stopCleaner(@RequestParam("cleanerId") Long cleanerId, @RequestParam("userEmail") String userEmail) {
-    CompletableFuture<String> stopResult = cleanerService.stopCleanerAsync(cleanerId, userEmail);
+    CompletableFuture<ResponseEntity<String>> stopResult = cleanerService.stopCleanerAsync(cleanerId, userEmail);
     try {
-      String result = stopResult.get(); // Get the result of the asynchronous operation
-      return ResponseEntity.ok(result);
+      return stopResult.get(); // Get the result of the asynchronous operation
     } catch (InterruptedException | ExecutionException e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " + e.getMessage());
     }
@@ -185,10 +183,9 @@ public class CleanerRestController {
 
   @GetMapping("/discharge")
   public ResponseEntity<String> dischargeCleaner(@RequestParam("cleanerId") Long cleanerId, @RequestParam("userEmail") String userEmail) {
-    CompletableFuture<String> dischargeResult = cleanerService.dischargeCleanerAsync(cleanerId, userEmail);
+    CompletableFuture<ResponseEntity<String>> dischargeResult = cleanerService.dischargeCleanerAsync(cleanerId, userEmail);
     try {
-      String result = dischargeResult.get(); // Get the result of the asynchronous operation
-      return ResponseEntity.ok(result);
+      return dischargeResult.get(); // Get the result of the asynchronous operation
     } catch (InterruptedException | ExecutionException e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " + e.getMessage());
     }

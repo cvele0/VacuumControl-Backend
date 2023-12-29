@@ -112,6 +112,9 @@ public class BootstrapData implements CommandLineRunner {
         for (int i = 0; i < 5; i++) {
             String name = "Cleaner " + i;
             Cleaner cleaner = new Cleaner(name, user1);
+            if (i == 0) {
+                cleaner.setStatus(CleanerStatus.ON);
+            }
             user1.addCleaner(cleaner);
         }
         ErrorMessage errorMessage = new ErrorMessage("Entering a system",

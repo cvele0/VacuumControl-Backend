@@ -1,12 +1,14 @@
 package rs.raf.demo.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import rs.raf.demo.model.Cleaner;
 import rs.raf.demo.model.CleanerStatus;
 
+import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
@@ -19,6 +21,11 @@ public interface CleanerRepository extends JpaRepository<Cleaner, Long> {
 //  List<Cleaner> findByNameContainingIgnoreCase(String name);
   List<Cleaner> findByNameContainingIgnoreCaseAndUser_UserId(String name, Long userId);
 
+
+  @Transactional
+  @Modifying
+  @Query("UPDATE Cleaner c SET c.active = false WHERE c.cleanerId = ?1")
+  void deactivateCleanerById(Long cleanerId);
 
 //  List<Cleaner> findByStatusIn(List<String> statuses);
   List<Cleaner> findByStatusInAndUser_UserId(List<String> statuses, Long userId);
@@ -65,5 +72,8 @@ public interface CleanerRepository extends JpaRepository<Cleaner, Long> {
 //                              @Param("statuses") List<CleanerStatus> statuses,
 //                              @Param("dateFrom") LocalDate dateFrom,
 //                              @Param("dateTo") LocalDate dateTo);
-
+  @Transactional
+  @Modifying
+  @Query("UPDATE Cleaner c SET c.status = :newStatus WHERE c.cleanerId = :cleanerId")
+  void updateCleanerStatusById(Long cleanerId, CleanerStatus newStatus);
 }
