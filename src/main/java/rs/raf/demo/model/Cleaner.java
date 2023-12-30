@@ -37,6 +37,9 @@ public class Cleaner {
   @Column(nullable = false)
   private Boolean active = true;
 
+  @Column
+  private int startCount = 0;
+
   public Cleaner() {}
 
   public Cleaner(String name, User user) {

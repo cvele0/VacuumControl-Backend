@@ -3,6 +3,7 @@ package rs.raf.demo.configuration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,6 +17,7 @@ import rs.raf.demo.filters.JwtFilter;
 import rs.raf.demo.services.UserService;
 
 @EnableWebSecurity
+@EnableScheduling
 @EnableAsync(proxyTargetClass = true)
 public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
