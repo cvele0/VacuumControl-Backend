@@ -32,8 +32,10 @@ public class CleanerRestController {
   }
 
   @GetMapping(value = "/all")
-  public ResponseEntity<List<Cleaner>> getAllCleaners() {
-    List<Cleaner> cleaners = cleanerService.findAll();
+  public ResponseEntity<List<Cleaner>> getAllCleaners(
+          @RequestParam("startIndex") Long startIndex,
+          @RequestParam("endIndex") Long endIndex) {
+    List<Cleaner> cleaners = cleanerService.findAllPaginated(startIndex, endIndex);
     return ResponseEntity.ok(cleaners);
   }
 

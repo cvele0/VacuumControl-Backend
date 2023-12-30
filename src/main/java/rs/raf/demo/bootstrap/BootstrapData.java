@@ -109,7 +109,7 @@ public class BootstrapData implements CommandLineRunner {
             UserPermission.CAN_REMOVE_VACUUMS
         );
         // Adding cleaners
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 15; i++) {
             String name = "Cleaner " + i;
             Cleaner cleaner = new Cleaner(name, user1);
             if (i == 0) {

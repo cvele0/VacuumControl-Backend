@@ -81,6 +81,22 @@ public class CleanerService implements IService<Cleaner, Long> {
     }
   }
 
+  public List<Cleaner> findAllPaginated(Long startIndex, Long endIndex) {
+    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+    User user = this.userRepository.findByEmail(userEmail);
+    if (user != null) {
+      return entityManager.createQuery(
+                      "SELECT c FROM Cleaner c WHERE c.user.userId = :userId", Cleaner.class)
+              .setParameter("userId", user.getUserId())
+              .setFirstResult(startIndex.intValue())
+              .setMaxResults((int) (endIndex - startIndex))
+              .getResultList();
+//      return this.cleanerRepository.findAllByUserIdPaginated(user.getUserId(), startIndex, endIndex);
+    } else {
+      throw new SecurityException("User does not have SEARCH permission");
+    }
+  }
+
   @Override
   public void deleteById(Long cleanerId) {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
