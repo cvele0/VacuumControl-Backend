@@ -162,8 +162,10 @@ public class CleanerRestController {
   }
 
   @GetMapping("/start")
-  public ResponseEntity<String> startCleaner(@RequestParam("cleanerId") Long cleanerId, @RequestParam("userEmail") String userEmail) {
-    CompletableFuture<ResponseEntity<String>> startResult = cleanerService.startCleanerAsync(cleanerId, userEmail);
+  public ResponseEntity<String> startCleaner(@RequestParam("cleanerId") Long cleanerId,
+                                             @RequestParam("enteredNumber") Long enteredNumber,
+                                             @RequestParam("email") String email) {
+    CompletableFuture<ResponseEntity<String>> startResult = cleanerService.startCleanerAsync(cleanerId, enteredNumber, email);
     try {
       return startResult.get();
     } catch (InterruptedException | ExecutionException e) {

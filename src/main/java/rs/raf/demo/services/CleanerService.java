@@ -170,25 +170,36 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
   }
 
   @Async
-  public CompletableFuture<ResponseEntity<String>> startCleanerAsync(Long cleanerId, String userEmail) {
+  public CompletableFuture<ResponseEntity<String>> startCleanerAsync(Long cleanerId, Long enteredNumber, String userEmail) {
     Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
+    if (userEmail == null) {
+      System.out.println("GRESKA NULL");
+      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not logged in"));
+    }
     boolean lockAcquired = cleanerLock.tryLock();
+    System.out.println("GOTOV EMAIL");
     try {
+      System.out.println("EMAIL:   " + userEmail);
       if (lockAcquired) {
         Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
         if (cleaner != null) {
+          System.out.println("NIJE NULL");
           CleanerStatus status = cleaner.getStatus();
           if (status != CleanerStatus.OFF) {
             String errorMessage = "The cleaner cannot be started";
             return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
           } else {
             User user = userRepository.findByEmail(userEmail);
+            System.out.println("USAO U STARTANJE");
             if (user != null && (user.getPermissions() & UserPermission.CAN_START_VACUUM) != 0) {
               CompletableFuture.runAsync(() -> {
                 try {
-                  Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
-                  cleaner.setStatus(CleanerStatus.ON);
-                  cleanerRepository.save(cleaner);
+                  System.out.println("USAO U SISTEM 2");
+                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.ON);
+                  System.out.println("TURN ON - STARTED");
+                  Thread.sleep(enteredNumber * 1000); // Simulate cleaner stopping by sleeping for 15 seconds
+                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
+                  System.out.println("TURN ON - ENDED");
                 } catch (InterruptedException e) {
                   Thread.currentThread().interrupt();
                 }
