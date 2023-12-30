@@ -25,6 +25,9 @@ import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -32,7 +35,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CleanerService implements IService<Cleaner, Long> {
   private final CleanerRepository cleanerRepository;
   private final UserRepository userRepository;
-  private final Map<Long, Lock> cleanerLocks = new HashMap<>();
+//  private final Map<Long, Lock> cleanerLocks = new ConcurrentHashMap<>();
+  private final Map<Long, Semaphore> cleanerLocks = new ConcurrentHashMap<>();
 
   @PersistenceContext
   private EntityManager entityManager;
@@ -169,72 +173,139 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
     }
   }
 
-  @Async
-  public CompletableFuture<ResponseEntity<String>> startCleanerAsync(Long cleanerId, Long enteredNumber, String userEmail) {
-    Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
-    if (userEmail == null) {
-      System.out.println("GRESKA NULL");
-      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not logged in"));
-    }
-    boolean lockAcquired = cleanerLock.tryLock();
-    System.out.println("GOTOV EMAIL");
-    try {
-      System.out.println("EMAIL:   " + userEmail);
-      if (lockAcquired) {
-        Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
-        if (cleaner != null) {
-          System.out.println("NIJE NULL");
-          CleanerStatus status = cleaner.getStatus();
-          if (status != CleanerStatus.OFF) {
-            String errorMessage = "The cleaner cannot be started";
-            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
-          } else {
-            User user = userRepository.findByEmail(userEmail);
-            System.out.println("USAO U STARTANJE");
-            if (user != null && (user.getPermissions() & UserPermission.CAN_START_VACUUM) != 0) {
-              CompletableFuture.runAsync(() -> {
-                try {
-                  System.out.println("USAO U SISTEM 2");
-                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.ON);
-                  System.out.println("TURN ON - STARTED");
-                  Thread.sleep(enteredNumber * 1000); // Simulate cleaner stopping by sleeping for 15 seconds
-                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
-                  System.out.println("TURN ON - ENDED");
-                } catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
-                }
-                // Perform actions after cleaner stops (if needed)
-              });
-              String successMessage = "Cleaner START initiated successfully.";
-              return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
-            } else {
-              String errorMessage = "User does not have START permission.";
-              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
-            }
-          }
+//  public Lock getLockForCleaner(Long cleanerId) {
+//    return cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
+//  }
+
+//  @Async
+//  public CompletableFuture<ResponseEntity<String>> startCleanerAsync(Long cleanerId, Long enteredNumber, String userEmail) {
+//    Lock cleanerLock = this.getLockForCleaner(cleanerId);
+//    if (userEmail == null) {
+//      System.out.println("GRESKA NULL");
+//      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not logged in"));
+//    }
+//    boolean lockAcquired = false;
+//    try {
+//      lockAcquired = cleanerLock.tryLock(enteredNumber, TimeUnit.SECONDS);
+//      if (lockAcquired) {
+//        System.out.println("USAO U START");
+//        Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
+//        if (cleaner != null) {
+//          CleanerStatus status = cleaner.getStatus();
+//          if (status != CleanerStatus.OFF) {
+//            String errorMessage = "The cleaner cannot be started";
+//            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
+//          } else {
+//            User user = userRepository.findByEmail(userEmail);
+//            if (user != null && (user.getPermissions() & UserPermission.CAN_START_VACUUM) != 0) {
+//              CompletableFuture.runAsync(() -> {
+//                try {
+//                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.ON);
+//                  System.out.println("TURN ON - STARTED");
+//                  Thread.sleep(enteredNumber * 1000); // Simulate cleaner stopping by sleeping for 15 seconds
+//                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
+//                  System.out.println("TURN ON - ENDED");
+//                } catch (InterruptedException e) {
+//                  Thread.currentThread().interrupt();
+//                }
+//                // Perform actions after cleaner stops (if needed)
+//              });
+//              String successMessage = "Cleaner START initiated successfully.";
+//              return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
+//            } else {
+//              String errorMessage = "User does not have START permission.";
+//              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
+//            }
+//          }
+//        } else {
+//          String errorMessage = "Cleaner not found.";
+//          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
+//        }
+//      } else {
+//        // Lock couldn't be acquired, return an appropriate message
+//        String errorMessage = "The cleaner is already in use.";
+//        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
+//      }
+//    } catch (InterruptedException e) {
+//      Thread.currentThread().interrupt();
+//      String errorMessage = "Thread interrupted in START method.";
+//      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
+//    } finally {
+//      // Ensure the lock is released in case of exceptions
+//      if (lockAcquired) {
+//        cleanerLock.unlock();
+//      }
+//    }
+//  }
+@Async
+public CompletableFuture<ResponseEntity<String>> startCleanerAsync(Long cleanerId, Long enteredNumber, String userEmail) {
+//  Lock cleanerLock = this.getLockForCleaner(cleanerId);
+  Semaphore cleanerSemaphore = cleanerLocks.computeIfAbsent(cleanerId, id -> new Semaphore(1));
+  boolean lockAcquired = false;
+  try {
+//    lockAcquired = cleanerLock.tryLock(enteredNumber, TimeUnit.SECONDS);
+    if (cleanerSemaphore.tryAcquire(enteredNumber, TimeUnit.SECONDS)) {
+//    if (lockAcquired) {
+      Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
+      if (cleaner != null) {
+        CleanerStatus status = cleaner.getStatus();
+        if (status != CleanerStatus.OFF) {
+          String errorMessage = "The cleaner cannot be started";
+          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
         } else {
-          String errorMessage = "Cleaner not found.";
-          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
+          User user = userRepository.findByEmail(userEmail);
+          if (user != null && (user.getPermissions() & UserPermission.CAN_START_VACUUM) != 0) {
+            CompletableFuture.runAsync(() -> {
+              try {
+                cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.ON);
+                System.out.println("TURN ON - STARTED");
+                Thread.sleep(enteredNumber * 1000); // Simulate cleaner stopping by sleeping for 15 seconds
+                cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
+                System.out.println("TURN ON - ENDED");
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+              }
+              // Perform actions after cleaner stops (if needed)
+            });
+            String successMessage = "Cleaner START initiated successfully.";
+            return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
+          } else {
+            Thread.currentThread().interrupt();
+            String errorMessage = "User does not have START permission.";
+            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
+          }
         }
       } else {
-        // Lock couldn't be acquired, return an appropriate message
-        String errorMessage = "The cleaner is already in use.";
-        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
+        Thread.currentThread().interrupt();
+        String errorMessage = "Cleaner not found.";
+        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
       }
-    } finally {
-      // Ensure the lock is released in case of exceptions
-      if (lockAcquired) {
-        cleanerLock.unlock();
-      }
+    } else {
+      // Lock couldn't be acquired, return an appropriate message
+      Thread.currentThread().interrupt();
+      String errorMessage = "The cleaner is already in use.";
+      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
     }
+  } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+    String errorMessage = "Thread interrupted in START method.";
+    return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
+  } finally {
+    // Ensure the lock is released in case of exceptions
+    cleanerSemaphore.release();
   }
+}
 
   @Async
   public CompletableFuture<ResponseEntity<String>> stopCleanerAsync(Long cleanerId, String userEmail) {
-    Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
-    boolean lockAcquired = cleanerLock.tryLock();
+//    Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
+//    Lock cleanerLock = this.getLockForCleaner(cleanerId);
+//    boolean lockAcquired = false;
+    Semaphore cleanerSemaphore = cleanerLocks.computeIfAbsent(cleanerId, id -> new Semaphore(1));
     try {
-      if (lockAcquired) {
+//      lockAcquired = cleanerLock.tryLock(15, TimeUnit.SECONDS);
+//      if (lockAcquired) {
+      if (cleanerSemaphore.tryAcquire(15, TimeUnit.SECONDS)) {
         Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
         if (cleaner != null) {
           CleanerStatus status = cleaner.getStatus();
@@ -257,93 +328,165 @@ public List<Cleaner> applyAllFilters(String name, List<CleanerStatus> statuses, 
               String successMessage = "Cleaner STOP initiated successfully.";
               return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
             } else {
+              Thread.currentThread().interrupt();
               String errorMessage = "User does not have STOP permission.";
               return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
             }
           }
         } else {
+          Thread.currentThread().interrupt();
           String errorMessage = "Cleaner not found.";
           return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
         }
       } else {
         // Lock couldn't be acquired, return an appropriate message
+        Thread.currentThread().interrupt();
         String errorMessage = "The cleaner is already in use.";
         return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
       }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      String errorMessage = "Thread interrupted in STOP method.";
+      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
     } finally {
-      // Ensure the lock is released in case of exceptions
-      if (lockAcquired) {
-        cleanerLock.unlock();
-      }
+      cleanerSemaphore.release();
     }
   }
 
-  @Async
-  public CompletableFuture<ResponseEntity<String>> dischargeCleanerAsync(Long cleanerId, String userEmail) {
-    Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
-    boolean lockAcquired = cleanerLock.tryLock();
-    try {
-      if (lockAcquired) {
-        Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
-        if (cleaner != null) {
-          CleanerStatus status = cleaner.getStatus();
-          if (status != CleanerStatus.OFF) {
-            String errorMessage = "The cleaner cannot be discharged";
-            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
-          } else {
-            User user = userRepository.findByEmail(userEmail);
-            if (user != null && (user.getPermissions() & UserPermission.CAN_DISCHARGE_VACUUM) != 0) {
-              CompletableFuture.runAsync(() -> {
-                try {
-                  Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
-                  cleaner.setStatus(CleanerStatus.DISCHARGING);
-                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.DISCHARGING);
-                  System.out.println("DISCHARGING SET DONE");
-                  Thread.sleep(15000);
-                  cleaner.setStatus(CleanerStatus.OFF);
-                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
-                  System.out.println("TURNING OFF SET DONE");
-
-//                  try {
-//                    cleanerRepository.save(cleaner);
-//                  } catch (Exception e) {
-//                    System.out.println(e.getMessage());
-//                  }
-//                  System.out.println("DISCHARGING DONE");
+//  @Async
+//  public CompletableFuture<ResponseEntity<String>> dischargeCleanerAsync(Long cleanerId, String userEmail) {
+////    Lock cleanerLock = cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
+//    Lock cleanerLock = this.getLockForCleaner(cleanerId);
+//    boolean lockAcquired = false;
+//    try {
+//      lockAcquired = cleanerLock.tryLock(30, TimeUnit.SECONDS);
+//      if (lockAcquired) {
+//        System.out.println("USAO U DISCHARGEEE");
+//        Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
+//        if (cleaner != null) {
+//          CleanerStatus status = cleaner.getStatus();
+//          if (status != CleanerStatus.OFF) {
+//            String errorMessage = "The cleaner cannot be discharged";
+//            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
+//          } else {
+//            User user = userRepository.findByEmail(userEmail);
+//            if (user != null && (user.getPermissions() & UserPermission.CAN_DISCHARGE_VACUUM) != 0) {
+//              CompletableFuture.runAsync(() -> {
+//                try {
 //                  Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
+//                  cleaner.setStatus(CleanerStatus.DISCHARGING);
+//                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.DISCHARGING);
+//                  System.out.println("DISCHARGING SET DONE");
+//                  Thread.sleep(15000);
 //                  cleaner.setStatus(CleanerStatus.OFF);
-//                  try {
-//                    cleanerRepository.save(cleaner);
-//                  } catch (Exception e) {
-//                    System.out.println(e.getMessage());
-//                  }
-//                  System.out.println("TURNING OFF DONE");
-                } catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
-                  throw new RuntimeException("THREAD EXC");
-                }
-              });
-              String successMessage = "Cleaner DISCHARGE initiated successfully.";
-              return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
-            } else {
-              String errorMessage = "User does not have DISCHARGE permission.";
-              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
-            }
-          }
+//                  cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
+//                  System.out.println("TURNING OFF SET DONE");
+//
+////                  try {
+////                    cleanerRepository.save(cleaner);
+////                  } catch (Exception e) {
+////                    System.out.println(e.getMessage());
+////                  }
+////                  System.out.println("DISCHARGING DONE");
+////                  Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
+////                  cleaner.setStatus(CleanerStatus.OFF);
+////                  try {
+////                    cleanerRepository.save(cleaner);
+////                  } catch (Exception e) {
+////                    System.out.println(e.getMessage());
+////                  }
+////                  System.out.println("TURNING OFF DONE");
+//                } catch (InterruptedException e) {
+//                  Thread.currentThread().interrupt();
+//                  throw new RuntimeException("THREAD EXC");
+//                }
+//              });
+//              String successMessage = "Cleaner DISCHARGE initiated successfully.";
+//              return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
+//            } else {
+//              String errorMessage = "User does not have DISCHARGE permission.";
+//              return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
+//            }
+//          }
+//        } else {
+//          String errorMessage = "Cleaner not found.";
+//          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
+//        }
+//      } else {
+//        // Lock couldn't be acquired, return an appropriate message
+//        String errorMessage = "The cleaner is already in use.";
+//        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
+//      }
+//    } catch (InterruptedException e) {
+//      Thread.currentThread().interrupt();
+//      String errorMessage = "Thread interrupted in DISCHARGE method.";
+//      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
+//    } finally {
+//      // Ensure the lock is released in case of exceptions
+//      if (lockAcquired) {
+//        cleanerLock.unlock();
+//      }
+//    }
+//  }
+@Async
+public CompletableFuture<ResponseEntity<String>> dischargeCleanerAsync(Long cleanerId, String userEmail) {
+//  Lock cleanerLock = this.getLockForCleaner(cleanerId);
+  Semaphore cleanerSemaphore = cleanerLocks.computeIfAbsent(cleanerId, id -> new Semaphore(1));
+  boolean lockAcquired = false;
+  try {
+//    lockAcquired = cleanerLock.tryLock(30, TimeUnit.SECONDS);
+//    if (lockAcquired) {
+    if (cleanerSemaphore.tryAcquire(30, TimeUnit.SECONDS)) {
+      // Ensure no other process is currently using the cleaner
+      Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
+      if (cleaner != null) {
+        CleanerStatus status = cleaner.getStatus();
+        if (status != CleanerStatus.OFF) {
+          String errorMessage = "The cleaner cannot be discharged";
+          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
         } else {
-          String errorMessage = "Cleaner not found.";
-          return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
+          User user = userRepository.findByEmail(userEmail);
+          if (user != null && (user.getPermissions() & UserPermission.CAN_DISCHARGE_VACUUM) != 0) {
+            CompletableFuture.runAsync(() -> {
+              try {
+                Thread.sleep(15000); // Simulate cleaner stopping by sleeping for 15 seconds
+                cleaner.setStatus(CleanerStatus.DISCHARGING);
+                cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.DISCHARGING);
+                System.out.println("DISCHARGING SET DONE");
+                Thread.sleep(15000);
+                cleaner.setStatus(CleanerStatus.OFF);
+                cleanerRepository.updateCleanerStatusById(cleaner.getCleanerId(), CleanerStatus.OFF);
+                System.out.println("TURNING OFF SET DONE");
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("THREAD EXC");
+              }
+            });
+            String successMessage = "Cleaner DISCHARGE initiated successfully.";
+            return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));
+          } else {
+            Thread.currentThread().interrupt();
+            String errorMessage = "User does not have DISCHARGE permission.";
+            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage));
+          }
         }
       } else {
-        // Lock couldn't be acquired, return an appropriate message
-        String errorMessage = "The cleaner is already in use.";
-        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
+        Thread.currentThread().interrupt();
+        String errorMessage = "Cleaner not found.";
+        return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage));
       }
-    } finally {
-      // Ensure the lock is released in case of exceptions
-      if (lockAcquired) {
-        cleanerLock.unlock();
-      }
+    } else {
+      // Lock couldn't be acquired, return an appropriate message
+      Thread.currentThread().interrupt();
+      String errorMessage = "The cleaner is already in use.";
+      return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorMessage));
     }
+  } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+    String errorMessage = "Thread interrupted in DISCHARGE method.";
+    return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
+  } finally {
+    cleanerSemaphore.release();
   }
+}
 }
