@@ -198,6 +198,9 @@ public class CleanerService implements IService<Cleaner, Long> {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
     Cleaner cleaner = this.cleanerRepository.findById(schedulingRequest.getCleanerId()).orElse(null);
     CronTrigger cronTrigger = new CronTrigger(schedulingRequest.getCron()); // "0 0 0 25 * *"
+    if (cleaner == null || !cleaner.getActive()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Cleaner not found");
+    }
     this.taskScheduler.schedule(() -> {
       if (schedulingRequest.getOperation().equalsIgnoreCase("start")) {
         this.startCleanerAsync(schedulingRequest.getCleanerId(), schedulingRequest.getDuration(), userEmail);
