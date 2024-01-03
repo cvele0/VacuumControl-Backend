@@ -3,9 +3,12 @@ package rs.raf.demo.services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import rs.raf.demo.model.SchedulingRequest;
 import rs.raf.demo.model.Cleaner;
 import rs.raf.demo.model.CleanerStatus;
 import rs.raf.demo.model.User;
@@ -39,10 +42,13 @@ public class CleanerService implements IService<Cleaner, Long> {
   @PersistenceContext
   private EntityManager entityManager;
 
+  private TaskScheduler taskScheduler;
+
   @Autowired
-  public CleanerService(CleanerRepository cleanerRepository, UserRepository userRepository) {
+  public CleanerService(CleanerRepository cleanerRepository, UserRepository userRepository, TaskScheduler taskScheduler) {
     this.cleanerRepository = cleanerRepository;
     this.userRepository = userRepository;
+    this.taskScheduler = taskScheduler;
   }
   @Override
   @Transactional
@@ -188,6 +194,22 @@ public class CleanerService implements IService<Cleaner, Long> {
     }
   }
 
+  public ResponseEntity<?> scheduleTask(SchedulingRequest schedulingRequest) {
+    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+    Cleaner cleaner = this.cleanerRepository.findById(schedulingRequest.getCleanerId()).orElse(null);
+    CronTrigger cronTrigger = new CronTrigger(schedulingRequest.getCron()); // "0 0 0 25 * *"
+    this.taskScheduler.schedule(() -> {
+      if (schedulingRequest.getOperation().equalsIgnoreCase("start")) {
+        this.startCleanerAsync(schedulingRequest.getCleanerId(), schedulingRequest.getDuration(), userEmail);
+      } else if (schedulingRequest.getOperation().equalsIgnoreCase("discharge")) {
+        this.dischargeCleanerAsync(schedulingRequest.getCleanerId(), userEmail);
+      } else if (schedulingRequest.getOperation().equalsIgnoreCase("stop")) {
+        this.stopCleanerAsync(schedulingRequest.getCleanerId(), userEmail);
+      }
+    }, cronTrigger);
+    return ResponseEntity.ok("Task scheduled successfully");
+  }
+
 //  public Lock getLockForCleaner(Long cleanerId) {
 //    return cleanerLocks.computeIfAbsent(cleanerId, id -> new ReentrantLock());
 //  }
@@ -256,13 +278,13 @@ public class CleanerService implements IService<Cleaner, Long> {
   public CompletableFuture<ResponseEntity<String>> startCleanerAsync(Long cleanerId, Long enteredNumber, String userEmail) {
   //  Lock cleanerLock = this.getLockForCleaner(cleanerId);
     Semaphore cleanerSemaphore = cleanerLocks.computeIfAbsent(cleanerId, id -> new Semaphore(1));
-    boolean lockAcquired = false;
     try {
       if (cleanerSemaphore.tryAcquire(enteredNumber, TimeUnit.SECONDS)) {
         Cleaner cleaner = cleanerRepository.findById(cleanerId).orElse(null);
         if (cleaner != null && cleaner.getActive()) {
           CleanerStatus status = cleaner.getStatus();
           if (status != CleanerStatus.OFF) {
+            Thread.currentThread().interrupt();
             String errorMessage = "The cleaner cannot be started";
             return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage));
           } else {
@@ -279,11 +301,7 @@ public class CleanerService implements IService<Cleaner, Long> {
                   Thread.currentThread().interrupt();
                 }
                 // Perform actions after cleaner stops (if needed)
-                cleaner.setStartCount((cleaner.getStartCount() + 1) % 3);
-                cleanerRepository.save(cleaner);
-                if (cleaner.getStartCount() % 3 == 0) {
-                  this.dischargeCleanerAsync(cleanerId, userEmail);
-                }
+                this.cleanerRepository.updateStartCount(cleaner.getCleanerId());
               });
               String successMessage = "Cleaner START initiated successfully.";
               return CompletableFuture.completedFuture(ResponseEntity.ok(successMessage));

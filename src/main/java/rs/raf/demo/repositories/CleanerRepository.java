@@ -76,4 +76,9 @@ public interface CleanerRepository extends JpaRepository<Cleaner, Long> {
   @Modifying
   @Query("UPDATE Cleaner c SET c.status = :newStatus WHERE c.cleanerId = :cleanerId")
   void updateCleanerStatusById(Long cleanerId, CleanerStatus newStatus);
+
+  @Transactional
+  @Modifying
+  @Query("UPDATE Cleaner c SET c.startCount = MOD(c.startCount + 1, 3) WHERE c.cleanerId = :cleanerId")
+  void updateStartCount(Long cleanerId);
 }

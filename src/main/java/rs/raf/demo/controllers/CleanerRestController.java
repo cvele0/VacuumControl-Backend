@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rs.raf.demo.model.Cleaner;
 import rs.raf.demo.model.CleanerStatus;
+import rs.raf.demo.model.SchedulingRequest;
 import rs.raf.demo.services.CleanerService;
 
 import javax.persistence.EntityNotFoundException;
@@ -50,6 +51,11 @@ public class CleanerRestController {
     }
   }
 
+  @PostMapping("/schedule")
+  public ResponseEntity<?> scheduleTask(@RequestBody SchedulingRequest schedulingRequest) {
+    return cleanerService.scheduleTask(schedulingRequest);
+  }
+
   @GetMapping(value = "/name")
   public ResponseEntity<?> getCleanersByNameContainingIgnoreCase(@RequestParam("name") String name) {
     try {
@@ -84,7 +90,6 @@ public class CleanerRestController {
     try {
       cleanerService.deleteById(id);
       return ResponseEntity.ok().build();
-      // TODO: delete all connected entities possibly
     } catch (EntityNotFoundException | IllegalStateException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
     } catch (SecurityException e) {
@@ -167,8 +172,17 @@ public class CleanerRestController {
   public ResponseEntity<String> startCleaner(@RequestParam("cleanerId") Long cleanerId,
                                              @RequestParam("enteredNumber") Long enteredNumber,
                                              @RequestParam("email") String email) {
+    Cleaner cleaner = this.cleanerService.findById(cleanerId).orElse(null);
+    if (cleaner == null) return ResponseEntity.badRequest().body("Cleaner not found");
+    boolean needsDischarge = false;
+    if (cleaner.getStartCount() % 3 == 2) {
+      needsDischarge = true;
+    }
     CompletableFuture<ResponseEntity<String>> startResult = cleanerService.startCleanerAsync(cleanerId, enteredNumber, email);
     try {
+      if (needsDischarge) {
+        this.cleanerService.dischargeCleanerAsync(cleanerId, email);
+      }
       return startResult.get();
     } catch (InterruptedException | ExecutionException e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " + e.getMessage());
