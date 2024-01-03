@@ -14,9 +14,13 @@ public class ErrorMessage {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private long errorMessageId;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "user_id", referencedColumnName = "userId")
   private User user;
+
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "cleaner_id", referencedColumnName = "cleanerId")
+  private Cleaner cleaner;
 
   private LocalDate date;
 
@@ -32,5 +36,10 @@ public class ErrorMessage {
     this.operation = operation;
     this.errorMessage = errorMessage;
     this.date = LocalDate.now();
+  }
+
+  public ErrorMessage(ErrorMessageDTO errorMessageDTO) {
+    this.operation = errorMessageDTO.getOperation();
+    this.errorMessage = errorMessageDTO.getErrorMessage();
   }
 }

@@ -109,16 +109,17 @@ public class BootstrapData implements CommandLineRunner {
             UserPermission.CAN_REMOVE_VACUUMS
         );
         // Adding cleaners
+        ErrorMessage errorMessage = new ErrorMessage("Entering a system",
+                "Testing error messages.");
         for (int i = 0; i < 15; i++) {
             String name = "Cleaner " + i;
             Cleaner cleaner = new Cleaner(name, user1);
             if (i == 0) {
                 cleaner.setStatus(CleanerStatus.ON);
+                cleaner.addErrorMessage(errorMessage);
             }
             user1.addCleaner(cleaner);
         }
-        ErrorMessage errorMessage = new ErrorMessage("Entering a system",
-                "Testing error messages.");
         errorMessage.setDate(LocalDate.of(2000, 10, 23));
         user1.addErrorMessage(errorMessage);
         this.userRepository.save(user1);

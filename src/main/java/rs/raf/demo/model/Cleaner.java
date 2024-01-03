@@ -7,6 +7,8 @@ import lombok.ToString;
 
 import javax.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -28,11 +30,16 @@ public class Cleaner {
   @Column(nullable = false)
   private LocalDate dateCreated;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "user_id", referencedColumnName = "userId")
   @JsonIgnore
   @ToString.Exclude
   private User user = null;
+
+  @OneToMany(mappedBy = "cleaner", cascade = CascadeType.ALL)
+  @JsonIgnore
+  @ToString.Exclude
+  private List<ErrorMessage> errorMessages = new ArrayList<>();
 
   @Column(nullable = false)
   private Boolean active = true;
@@ -46,5 +53,10 @@ public class Cleaner {
     this.name = name;
     this.user = user;
     this.dateCreated = LocalDate.now();
+  }
+
+  public void addErrorMessage(ErrorMessage errorMessage) {
+    errorMessage.setCleaner(this);
+    this.errorMessages.add(errorMessage);
   }
 }
